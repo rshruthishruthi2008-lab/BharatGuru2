@@ -5,15 +5,10 @@ from google import genai
 st.set_page_config(page_title="BharatGuru ROCKET", page_icon="🚀", layout="wide")
 st.title("🚀 BharatGuru ROCKET - Fastest + Textbook")
 
-# LOAD AQ KEY from Secrets
-try:
-    API_KEY = st.secrets["API_KEY"]
-    API_KEY = API_KEY.strip().strip('"').strip("'")
-except:
-    API_KEY = ""
-
+# AQ KEY FROM SECRETS
+API_KEY = st.secrets.get("API_KEY","").strip().strip('"').strip("'")
 if not API_KEY:
-    st.error("❌ Add API_KEY in Streamlit Secrets!")
+    st.error("Add API_KEY in Secrets")
     st.stop()
 
 client = genai.Client(api_key=API_KEY)
@@ -34,22 +29,23 @@ if st.button("🚀 ROCKET ANSWER", type="primary"):
     if not question:
         st.warning("Type question!")
     else:
-        prompt = f"You are BharatGuru for {exam} {subject}. Answer in {lang_name} language in 5 short points. Add TEXTBOOK REF chapter at end. Question: {question}"
-        with st.spinner("⚡ Rocket answering..."):
+        prompt = f"You are BharatGuru for {exam} {subject}. Answer in {lang_name} in 5 short points. Add textbook ref. Question: {question}"
+        with st.spinner("⚡ Answering..."):
             try:
-                response = client.models.generate_content(
-                    model="gemini-2.0-flash",
+                # NEW 2026 MODEL - gemini-2.5-flash
+                resp = client.models.generate_content(
+                    model="gemini-2.5-flash",
                     contents=prompt
                 )
-                ans = response.text
+                ans = resp.text
                 st.success(ans)
-                st.info(f"📚 Reference: NCERT/Karnataka {subject} - {exam}")
+                st.info(f"📚 Ref: Karnataka/NCERT {subject} {exam}")
                 if voice_on:
                     try:
-                        tts = gTTS(text=ans[:3000], lang=lang_map[lang_name])
+                        tts = gTTS(text=ans[:2500], lang=lang_map[lang_name])
                         tts.save("ans.mp3")
                         st.audio("ans.mp3")
                     except:
-                        st.write("Voice not available for this language")
+                        pass
             except Exception as e:
                 st.error(f"Error: {e}")
