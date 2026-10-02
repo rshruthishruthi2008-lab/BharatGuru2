@@ -49,3 +49,5 @@ if st.button("🚀 ROCKET ANSWER", type="primary"):
                         pass
             except Exception as e:
                 st.error(f"Error: {e}")
+                st.markdown("---")
+st.markdown("### 👩‍💻 Made with ❤️ by R. Shruthi | CEO BharatGuru ROCKET 🚀")
