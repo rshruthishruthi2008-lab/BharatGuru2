@@ -34,7 +34,7 @@ if st.button("🚀 ROCKET ANSWER", type="primary"):
             try:
                 # NEW 2026 MODEL - gemini-2.5-flash
                 resp = client.models.generate_content(
-                    model="gemini-2.5-flash",
+                    model="gemini-flash-latest",
                     contents=prompt
                 )
                 ans = resp.text
