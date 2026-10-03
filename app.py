@@ -3,16 +3,19 @@ import time
 from google import genai
 from google.genai import types
 from gtts import gTTS
-import os
+from fpdf import FPDF
+from PIL import Image
+import io
 
-st.set_page_config(page_title="BharatGuru ROCKET", page_icon="🚀", layout="centered")
+st.set_page_config(page_title="BharatGuru ROCKET 10.0", page_icon="🚀", layout="centered")
 
 API_KEY = st.secrets["API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
 MODELS = ["gemini-2.5-flash-lite", "gemini-2.5-flash", "gemini-3-flash-preview"]
 
-st.title("🚀 BharatGuru ROCKET")
+st.title("🚀 BharatGuru ROCKET 10.0")
+st.caption("32 Exams | Photo Doubt | PDF + Voice")
 
 exam = st.selectbox("📚 Select Your Competitive Exam", [
     "UPSC", "KPSC - KAS / FDA / SDA / PSI / PDO", "KCET", "NEET", "JEE Main", "JEE Advanced",
@@ -25,49 +28,69 @@ exam = st.selectbox("📚 Select Your Competitive Exam", [
 
 subject = st.selectbox("📖 Subject", ["Science", "Biology", "Physics", "Chemistry", "Maths", "History", "Geography", "Polity", "Economy", "Kannada", "English", "Hindi", "Computer Science", "GK", "Current Affairs", "Reasoning", "Aptitude"])
 lang = st.selectbox("🗣️ Language", ["English", "Kannada", "Hindi", "Tamil", "Telugu", "Malayalam", "Marathi", "Gujarati", "Bengali", "Punjabi", "Urdu", "Odia", "Assamese"])
-question = st.text_input(f"❓ Ask {exam} Doubt")
-voice_on = st.checkbox("🔊 Enable Voice Answer", value=True)
+
+# --- NEW: PHOTO DOUBT ---
+uploaded_file = st.file_uploader("📸 Upload Photo of Doubt (Optional)", type=["jpg","png","jpeg"])
+
+question = st.text_input(f"❓ Ask {exam} Doubt", placeholder="Or just upload photo above")
+
+voice_on = st.checkbox("🔊 Voice Answer", value=True)
+
+def create_pdf(text, exam_name):
+    pdf = FPDF()
+    pdf.add_page()
+    pdf.set_font("Arial", size=12)
+    pdf.cell(200, 10, txt=f"BharatGuru - {exam_name} - Made by R.Shruthi", ln=True, align='C')
+    pdf.ln(10)
+    # Clean text for PDF
+    clean_text = text.encode('latin-1', 'replace').decode('latin-1')
+    pdf.multi_cell(0, 10, clean_text)
+    return pdf.output(dest='S').encode('latin-1')
 
 if st.button("🚀 ROCKET ANSWER", type="primary", use_container_width=True):
-    if not question.strip():
-        st.warning("Type doubt!")
+    if not question.strip() and not uploaded_file:
+        st.warning("Type doubt or upload photo!")
     else:
-        # --- SMART DESCRIPTIVE LOGIC ---
         if exam in ["Class 10 - SSLC"]:
-            length_rule = "Give short 4-5 lines answer, easy language, 100 words"
+            length_rule = "Short 4-5 lines, 100 words"
         elif exam in ["PUC 1 & 2", "KCET", "NEET", "JEE Main", "JEE Advanced"]:
-            length_rule = "Give DESCRIPTIVE answer for higher education: Definition, Structure, Function, Importance in points, Example. 250-300 words, PUC textbook level"
-        else: # UPSC, KPSC etc
-            length_rule = "Give DETAILED UPSC/KPSC level answer: Introduction, Body with points, Conclusion, Textbook Reference. 300-350 words, analytical"
+            length_rule = "DESCRIPTIVE: Definition, Structure, Function, Points, Example. 250-300 words PUC level"
+        else:
+            length_rule = "DETAILED UPSC level: Intro, Body points, Conclusion. 300-350 words"
 
-        prompt = f"""You are BharatGuru Indian expert.
-Exam: {exam}, Subject: {subject}, Language: {lang}, Question: {question}
-Instruction: {length_rule}
-Language must be {lang}. At end add: Textbook Reference: [Book, Chapter]
-"""
+        prompt_text = f"Exam:{exam}, Sub:{subject}, Lang:{lang}, Q:{question}. {length_rule}. Answer in {lang}. Add Textbook Ref at end."
+        
+        contents = [prompt_text]
+        if uploaded_file:
+            img = Image.open(uploaded_file)
+            st.image(img, caption="Your Doubt Photo", use_column_width=True)
+            contents.append(img)
 
-        with st.spinner("🚀 Thinking..."):
+        with st.spinner("🚀 ROCKET Thinking..."):
             for m in MODELS:
                 try:
                     resp = client.models.generate_content(
-                        model=m, 
-                        contents=prompt, 
-                        config=types.GenerateContentConfig(max_output_tokens=800, temperature=0.4)
+                        model=m,
+                        contents=contents,
+                        config=types.GenerateContentConfig(max_output_tokens=1000, temperature=0.4)
                     )
                     answer = resp.text
                     st.success(answer)
-                    st.caption(f"⚡ {m} | Descriptive Mode for {exam}")
+                    st.caption(f"⚡ {m} | {exam}")
 
-                    # --- AUDIO FIX ---
+                    # AUDIO
                     if voice_on:
                         try:
-                            lang_code = "kn" if lang=="Kannada" else "hi" if lang=="Hindi" else "en"
-                            tts = gTTS(text=answer[:400], lang=lang_code, slow=False)
+                            lc = "kn" if lang=="Kannada" else "hi" if lang=="Hindi" else "en"
+                            tts = gTTS(text=answer[:400], lang=lc)
                             tts.save("answer.mp3")
-                            st.audio("answer.mp3", format="audio/mp3")
-                            st.caption("🔊 Voice Answer Playing")
-                        except Exception as e:
-                            st.caption(f"Audio error: {e}")
+                            st.audio("answer.mp3")
+                        except:
+                            pass
+
+                    # PDF DOWNLOAD
+                    pdf_bytes = create_pdf(answer, exam)
+                    st.download_button("📄 Download as PDF", data=pdf_bytes, file_name=f"{exam}_Answer.pdf", mime="application/pdf", use_container_width=True)
 
                     break
                 except Exception as e:
@@ -78,4 +101,4 @@ Language must be {lang}. At end add: Textbook Reference: [Book, Chapter]
                     break
 
 st.markdown("---")
-st.markdown("<center>Made  by <b>R. Shruthi</b> |  CEO 🚀</center>", unsafe_allow_html=True)
+st.markdown("<center>Made by <b>R. Shruthi</b> | Devanhalli CEO 🚀<br>Photo Doubt + PDF + Voice ✅</center>", unsafe_allow_html=True)
