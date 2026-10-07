@@ -7,7 +7,11 @@ from fpdf import FPDF
 from PIL import Image
 
 st.set_page_config(page_title="BharatGuru ROCKET 12.0", page_icon="🚀", layout="centered")
-
+st.link_button(
+    label="📲 Download Android App",
+    url="https://google.com",
+    type="primary"
+)
 API_KEY = st.secrets["API_KEY"]
 client = genai.Client(api_key=API_KEY)
 
